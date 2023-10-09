@@ -38,7 +38,7 @@ let query = {
 
 
 router.get('/',query.prikaziSort, query.prikaziIzdvojene, query.prikazPasaPoDatumu, function(req,res,next){
-    res.json({message: req.raseSort, psi : req.izdvojeni, psiOrdered : req.psiOrdered})
+    res.json({message: req.raseSort, psiFeatured : req.izdvojeni, psiOrdered : req.psiOrdered})
 })
 
 
