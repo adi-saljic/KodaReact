@@ -1,14 +1,18 @@
 const express = require('express');
 const cors = require('cors');
-
+const bodyParser = require('body-parser');
 const app = express();
+
+
 
 app.use(cors());
 app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 
-var raseRouter = require('./routes/rase');
+
 var homeRouter = require('./routes/home');
+var raseRouter = require('./routes/rase');
 var shopRouter = require('./routes/shop');
 var dogViewRouter = require('./routes/dogView');
 
