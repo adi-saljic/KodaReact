@@ -21,6 +21,14 @@ let query = {
                 next();
             })
       },
+      prikazRase: function (req,res,next){
+        pool.query(`select * from rasa where id_rase = $1 ;`,[req.params.id],
+            (err,result) => {
+                console.log("Inside query " ,result.rows)
+                req.breedDetails = result.rows;
+                next();
+            })
+      },
 }
 
 // KATEGORIJA  SU POZITIVNE KARAKTERISTIKE (KARAKTERISTIKE U KOJIM SE GLEDA DA LI JE OCENA > 2)
@@ -216,6 +224,60 @@ function makingQuery(body){
     return queryString;
 }
 
+function razdvojiRasePoKategorijama(rase){
+    
+    let kat1 = [];
+    let kat2 = [];
+    let kat3 = [];
+    const kategorija = ["zivot_u_stanu",
+                        'pogodan_za_nove_vlasnike',
+                        'otpornost_na_hladnocu',
+                        'tolerise_usamljenost',
+                        'otpornost_na_toplotu',
+                        'vjeran_obitelji',
+                        'prijateljstvo_sa_psima',
+                        'pogodan_za_djecu',
+                        'prijateljstvo_sa_strancima',
+                        'koliko_slini',
+                        'pogodan_za_treniranje',
+                        'sposobnost_lova',
+                        'potreba_za_kretanjem',
+                        'nivo_energije',
+                        'volja_za_igrom'
+                        ];
+   const kategorija2 = ['linjanje',
+                        'potencijal_debljanja',
+                        'koliko_slini',
+                        'mogucnost_lutanja',
+                        'glasnost',
+                        'mala_potreba_za_kretanjem'
+                        ];
+
+    for (let i =0; i<rase.length; i++){
+        if(kategorija.includes(rase[i])){
+            kat1.push(rase[i]);
+        }
+        else if(kategorija2.includes(rase[i])){
+            rase[i] === 'mala_potreba_za_kretanjem' ? kat2.push('potreba_za_kretanjem') : kat2.push(rase[i]);
+        }
+        else{
+            switch(rase[i]){
+                case 'jako_mali' : kat3.push('1') ; break;
+                case 'mali' : kat3.push('2') ; break;
+                case 'srednji' : kat3.push('3') ; break;
+                case 'veliki' : kat3.push('4') ; break;
+                case 'jako_veliki' : kat3.push('5') ; break;
+            }
+            
+        }
+    }
+    return {
+        kategorija : kat1,
+        kategorija2 : kat2,
+        kategorija3 : kat3.length === 1 ? kat3[0] : kat3
+    }
+}
+
 
 router.get('/',query.prikaziSort, query.prikazPasa, function(req,res,next){
     res.json({message: req.raseSort, psi : req.psi})
@@ -224,15 +286,14 @@ router.get('/',query.prikaziSort, query.prikazPasa, function(req,res,next){
 //NEKADA PROVJERITI DA LI JE DOBRA PRAKSA OVO SA TOKENOM I KAKO BI SE TO MOGLO BOLJE
 
 router.post('/odabran',function (req,res){
-    console.log(makingQuery(req.body))
-    pool.query(makingQuery(req.body), (err, result) => {
+    let values = req.body.checkedValues
+    pool.query(makingQuery(razdvojiRasePoKategorijama(values)), (err, result) => {
         if(err){
             console.log(err);
         }else{
             const raseRecommended = result.rows;
-            const uniqueToken = Date.now().toString();
-            dataStore[uniqueToken] = raseRecommended;
-            res.redirect(`/rase/recommended?token=${uniqueToken}`);
+            res.status(200).json({ raseRecommended });
+            
         }
        
     });
@@ -243,20 +304,28 @@ router.post('/odabran',function (req,res){
 router.get('/recommended', function(req,res,next){
     const token = req.query.token;
     const raseRecommended = dataStore[token];
+    setTimeout(() => {
+        console.log("desi se 2")
+        if (raseRecommended) {
+            // Use the data
+            console.log("Tuu ", raseRecommended);
+            res.json({raseRecommended : {}});
+    
+            // Delete the data after it has been used (for security and memory management)
+            delete dataStore[token];
+    
+            // You can send the raseRecommended data to the client or perform other actions
+            
+        } else {
+            // Handle cases where the token is invalid or expired
+            res.status(404).send("Data not found or token expired");
+        }
+    },5000)
+})
 
-    if (raseRecommended) {
-        // Use the data
-        console.log("Tuu ", raseRecommended);
-
-        // Delete the data after it has been used (for security and memory management)
-        delete dataStore[token];
-
-        // You can send the raseRecommended data to the client or perform other actions
-        res.send(raseRecommended);
-    } else {
-        // Handle cases where the token is invalid or expired
-        res.status(404).send("Data not found or token expired");
-    }
+router.get('/breed/:id',query.prikazRase, function(req,res,next){
+    console.log(req.breedDetails)
+    res.json({breedDetails: req.breedDetails})
 })
 
 
